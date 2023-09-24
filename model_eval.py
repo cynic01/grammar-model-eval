@@ -47,7 +47,8 @@ class FileEval:
         proc_model = subprocess.run(["serrant_parallel", "-orig", str(orig), "-cor", str(model_results), "-out", str(model_m2_out)])
         proc_label = subprocess.run(["serrant_parallel", "-orig", str(orig), "-cor", str(label), "-out", str(label_m2_out)])
         # evaluate model results against label
-        proc_eval = subprocess.run(["serrant_compare", "-hyp", str(model_m2_out), "-ref", str(label_m2_out)])
+        proc_eval_serrant = subprocess.run(["serrant_compare", "-hyp", str(model_m2_out), "-ref", str(label_m2_out)])
+        proc_eval_m2scorer = subprocess.run([str(Path(wd / "m2scorer" / "m2scorer")), str(model_results), str(label_m2_out)])
 
 class ModelEval:
     def __init__(self,
