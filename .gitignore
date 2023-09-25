@@ -160,5 +160,5 @@ cython_debug/
 #.idea/
 
 # Generated files
-*.tok
-*.m2
+ielts_essays/*.tok
+ielts_essays/*.m2

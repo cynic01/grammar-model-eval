@@ -11,44 +11,31 @@ class FileEval:
         self.nlp = nlp or spacy.load('en')
         self.tokenizer = tokenizer or self.nlp.tokenizer
         self.scorer = scorer #or SerrantScorer(nlp=self.nlp)
+
+    def tokenize(self, in_filename: Path, out_filename: Path=None):
+        """Converts file defined by in_filename to word tokenized format"""
+        out_filename = out_filename or in_filename.with_suffix(".tok")
+        with open(in_filename, 'r') as fin:
+            orig_lines = fin.readlines()
+        orig_tokens_text = [" ".join([token.text for token in self.tokenizer(sent.strip())]) + "\n" for sent in orig_lines]
+        with open(out_filename, 'w') as fout:
+            fout.writelines(orig_tokens_text)
+        return out_filename
     
     def evaluate(self,
-                 orig=Path(wd / "orig.txt"),
-                 orig_tokenized=False,
-                 model_results=Path(wd / "model_results.txt"),
-                 model_results_tokenized=False,
-                 label=Path(wd / "label.txt"),
-                 label_tokenized=False,
-                 model_m2_out=Path(wd / "model_edits.m2"),
-                 label_m2_out=Path(wd / "gold_edits.m2")):
-        # convert to word tokenized format
-        if not orig_tokenized:
-            with open(orig, 'r') as forig:
-                orig_lines = forig.readlines()
-            orig_tokens_text = [" ".join([token.text for token in self.tokenizer(sent.strip())]) + "\n" for sent in orig_lines]
-            orig = Path(wd / "orig.tok")
-            with open(orig, 'w') as f:
-                f.writelines(orig_tokens_text)
-        if not model_results_tokenized:
-            with open(model_results, 'r') as fmodel_results:
-                model_results_lines = fmodel_results.readlines()
-            model_results_tokens_text = [" ".join([token.text for token in self.tokenizer(sent.strip())]) + "\n" for sent in model_results_lines]
-            model_results = Path(wd / "model_results.tok")
-            with open(model_results, 'w') as f:
-                f.writelines(model_results_tokens_text)
-        if not label_tokenized:
-            with open(label, 'r') as flabel:
-                label_lines = flabel.readlines()
-            label_tokens_text = [" ".join([token.text for token in self.tokenizer(sent.strip())]) + "\n" for sent in label_lines]
-            label = Path(wd / "label.tok")
-            with open(label, 'w') as f:
-                f.writelines(label_tokens_text)
+                 orig: Path,
+                 model: Path,
+                 label: Path,
+                 model_m2_out: Path=None,
+                 label_m2_out: Path=None):
         # generate annotated m2 files
-        proc_model = subprocess.run(["serrant_parallel", "-orig", str(orig), "-cor", str(model_results), "-out", str(model_m2_out)])
+        model_m2_out = model_m2_out or model.with_suffix(".m2")
+        label_m2_out = label_m2_out or label.with_suffix(".m2")
+        proc_model = subprocess.run(["serrant_parallel", "-orig", str(orig), "-cor", str(model), "-out", str(model_m2_out)])
         proc_label = subprocess.run(["serrant_parallel", "-orig", str(orig), "-cor", str(label), "-out", str(label_m2_out)])
         # evaluate model results against label
         proc_eval_serrant = subprocess.run(["serrant_compare", "-hyp", str(model_m2_out), "-ref", str(label_m2_out)])
-        proc_eval_m2scorer = subprocess.run([str(Path(wd / "m2scorer" / "m2scorer")), str(model_results), str(label_m2_out)])
+        proc_eval_m2scorer = subprocess.run([str(Path(wd / "m2scorer" / "m2scorer")), str(model), str(label_m2_out)])
 
 class ModelEval:
     def __init__(self,
@@ -80,5 +67,16 @@ class ModelEval:
         model_results = self.model.predict(model_in)
 
 if __name__ == '__main__':
+    orig = Path(wd / "ielts_essays" / "orig.txt")
+    model_results = Path(wd / "ielts_essays" / "model_results.txt")
+    label = Path(wd / "ielts_essays" / "label.txt")
+
     fe = FileEval()
-    fe.evaluate()
+
+    orig_tok = fe.tokenize(orig)
+    model_tok = fe.tokenize(model_results)
+    label_tok = fe.tokenize(label)
+
+    fe.evaluate(orig=orig_tok,
+                model=model_tok,
+                label=label_tok)
