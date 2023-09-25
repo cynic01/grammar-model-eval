@@ -22,20 +22,20 @@ class FileEval:
             fout.writelines(orig_tokens_text)
         return out_filename
     
-    def evaluate(self,
-                 orig: Path,
-                 model: Path,
-                 label: Path,
-                 model_m2_out: Path=None,
-                 label_m2_out: Path=None):
-        # generate annotated m2 files
-        model_m2_out = model_m2_out or model.with_suffix(".m2")
-        label_m2_out = label_m2_out or label.with_suffix(".m2")
-        proc_model = subprocess.run(["serrant_parallel", "-orig", str(orig), "-cor", str(model), "-out", str(model_m2_out)])
-        proc_label = subprocess.run(["serrant_parallel", "-orig", str(orig), "-cor", str(label), "-out", str(label_m2_out)])
-        # evaluate model results against label
-        proc_eval_serrant = subprocess.run(["serrant_compare", "-hyp", str(model_m2_out), "-ref", str(label_m2_out)])
-        proc_eval_m2scorer = subprocess.run([str(Path(wd / "m2scorer" / "m2scorer")), str(model), str(label_m2_out)])
+    def generate_m2(self, original_tok: Path, corrected_tok: Path, out_filename: Path=None):
+        """Generate annotated m2 file from correction"""
+        out_filename = out_filename or corrected_tok.with_suffix(".m2")
+        proc = subprocess.run(["serrant_parallel", "-orig", str(original_tok), "-cor", str(corrected_tok), "-out", str(out_filename)])
+        return out_filename
+    
+    def serrant_evaluate(self, model_m2: Path, label_m2: Path):
+        """Evaluate model results against label using serrant"""
+        proc = subprocess.run(["serrant_compare", "-hyp", str(model_m2), "-ref", str(label_m2)])
+    
+    def m2scorer_evaluate(self, model_tok, label_m2):
+        """Evaluate model results against label using m2scorer"""
+        proc = subprocess.run([str(Path(wd / "m2scorer" / "m2scorer")), str(model_tok), str(label_m2)])
+        
 
 class ModelEval:
     def __init__(self,
@@ -67,6 +67,7 @@ class ModelEval:
         model_results = self.model.predict(model_in)
 
 if __name__ == '__main__':
+    # Evaluate against our essay data
     orig = Path(wd / "ielts_essays" / "orig.txt")
     model_results = Path(wd / "ielts_essays" / "model_results.txt")
     label = Path(wd / "ielts_essays" / "label.txt")
@@ -77,6 +78,8 @@ if __name__ == '__main__':
     model_tok = fe.tokenize(model_results)
     label_tok = fe.tokenize(label)
 
-    fe.evaluate(orig=orig_tok,
-                model=model_tok,
-                label=label_tok)
+    model_m2 = fe.generate_m2(orig_tok, model_tok)
+    label_m2 = fe.generate_m2(orig_tok, label_tok)
+
+    fe.serrant_evaluate(model_m2, label_m2)
+    fe.m2scorer_evaluate(model_tok, label_m2)
