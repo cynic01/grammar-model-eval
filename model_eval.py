@@ -26,21 +26,21 @@ class FileEval:
             with open(orig, 'r') as forig:
                 orig_lines = forig.readlines()
             orig_tokens_text = [" ".join([token.text for token in self.tokenizer(sent.strip())]) + "\n" for sent in orig_lines]
-            orig = Path(wd / "orig_tokenized.txt")
+            orig = Path(wd / "orig.tok")
             with open(orig, 'w') as f:
                 f.writelines(orig_tokens_text)
         if not model_results_tokenized:
             with open(model_results, 'r') as fmodel_results:
                 model_results_lines = fmodel_results.readlines()
             model_results_tokens_text = [" ".join([token.text for token in self.tokenizer(sent.strip())]) + "\n" for sent in model_results_lines]
-            model_results = Path(wd / "model_results_tokenized.txt")
+            model_results = Path(wd / "model_results.tok")
             with open(model_results, 'w') as f:
                 f.writelines(model_results_tokens_text)
         if not label_tokenized:
             with open(label, 'r') as flabel:
                 label_lines = flabel.readlines()
             label_tokens_text = [" ".join([token.text for token in self.tokenizer(sent.strip())]) + "\n" for sent in label_lines]
-            label = Path(wd / "label_tokenized.txt")
+            label = Path(wd / "label.tok")
             with open(label, 'w') as f:
                 f.writelines(label_tokens_text)
         # generate annotated m2 files
