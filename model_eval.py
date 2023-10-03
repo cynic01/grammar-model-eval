@@ -38,48 +38,74 @@ class FileEval:
         
 
 class ModelEval:
-    def __init__(self,
-                 nlp=None,
-                 model=None,
-                 tokenizer=None,
-                 scorer=None
-                 ):
-        self.nlp = nlp or spacy.load('en')
-        self.model = model #or GPT2GEC()
-        self.tokenizer = tokenizer or self.nlp.tokenizer
-        self.scorer = scorer #or SerrantScorer(nlp=self.nlp)
+    def __init__(self, fileeval=None):
+        self.fe = fileeval or FileEval()
     
-    def evaluate(self,
-                 orig=Path(wd / "orig.txt"),
-                 label=Path(wd / "label.txt")):
-        with open(orig, 'r') as forig:
-            input_lines = forig.readlines()
-        # tokenization
-        if not self.model.has_tokenizer_detokenizer:
-            original_tokens = []
-            for sent in input_lines:
-                tokens = self.tokenizer.tokenize(sent)
-                original_tokens.append(tokens)
-            model_in = original_tokens
-        else:
-            model_in = input_lines
-        # predict
-        model_results = self.model.predict(model_in)
+    def t5_ielts(self,
+                 orig=Path(wd / "ielts_essays" / "orig.txt"),
+                 model_results=Path(wd / "ielts_essays" / "T5_finetuned.txt"),
+                 label=Path(wd / "ielts_essays" / "label.txt")
+                 ):
+        orig_tok = self.fe.tokenize(orig)
+        model_tok = self.fe.tokenize(model_results)
+        label_tok = self.fe.tokenize(label)
+
+        model_m2 = self.fe.generate_m2(orig_tok, model_tok)
+        label_m2 = self.fe.generate_m2(orig_tok, label_tok)
+
+        self.fe.serrant_evaluate(model_m2, label_m2)
+        self.fe.m2scorer_evaluate(model_tok, label_m2)
+    
+    def gpt2_ielts(self,
+                   orig=Path(wd / "ielts_essays" / "orig.txt"),
+                   model_tok=Path(wd / "ielts_essays" / "GPT2.tok"),
+                   label=Path(wd / "ielts_essays" / "label.txt")
+                   ):
+        orig_tok = self.fe.tokenize(orig)
+        label_tok = self.fe.tokenize(label)
+
+        model_m2 = self.fe.generate_m2(orig_tok, model_tok)
+        label_m2 = self.fe.generate_m2(orig_tok, label_tok)
+
+        self.fe.serrant_evaluate(model_m2, label_m2)
+        self.fe.m2scorer_evaluate(model_tok, label_m2)
+    
+    def t5_conll14st(self,
+                     orig_tok=Path(wd / "conll14st" / "combined.tok"),
+                     model_results=Path(wd / "conll14st" / "T5_base.txt"),
+                     label_m2=Path(wd / "conll14st" / "official-2014.combined.m2")
+                     ):
+        model_tok = self.fe.tokenize(model_results)
+
+        model_m2 = self.fe.generate_m2(orig_tok, model_tok)
+
+        self.fe.serrant_evaluate(model_m2, label_m2)
+        self.fe.m2scorer_evaluate(model_tok, label_m2)
+    
+    def gpt2_conll14st(self,
+                       orig_tok=Path(wd / "conll14st" / "combined.tok"),
+                       model_tok=Path(wd / "conll14st" / "GPT2.tok"),
+                       label_m2=Path(wd / "conll14st" / "official-2014.combined.m2")
+                       ):
+        model_m2 = self.fe.generate_m2(orig_tok, model_tok)
+
+        self.fe.serrant_evaluate(model_m2, label_m2)
+        self.fe.m2scorer_evaluate(model_tok, label_m2)
 
 if __name__ == '__main__':
-    # Evaluate against our essay data
-    orig = Path(wd / "ielts_essays" / "orig.txt")
-    model_results = Path(wd / "ielts_essays" / "model_results.txt")
-    label = Path(wd / "ielts_essays" / "label.txt")
+    me = ModelEval()
+    ## Evaluate against our essay data
 
-    fe = FileEval()
+    # T5
+    me.t5_ielts()
 
-    orig_tok = fe.tokenize(orig)
-    model_tok = fe.tokenize(model_results)
-    label_tok = fe.tokenize(label)
+    # GPT2
+    # me.gpt2_ielts()
 
-    model_m2 = fe.generate_m2(orig_tok, model_tok)
-    label_m2 = fe.generate_m2(orig_tok, label_tok)
+    ## Evaluate against conll14st test data
 
-    fe.serrant_evaluate(model_m2, label_m2)
-    fe.m2scorer_evaluate(model_tok, label_m2)
+    # T5
+    # me.t5_conll14st()
+
+    # GPT2
+    # me.gpt2_conll14st()
