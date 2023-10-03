@@ -162,3 +162,5 @@ cython_debug/
 # Generated files
 ielts_essays/*.tok
 ielts_essays/*.m2
+conll14st/*.tok
+conll14st/*.m2
